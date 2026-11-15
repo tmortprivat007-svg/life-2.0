@@ -51,8 +51,8 @@ export function DataCenter({ onClose }: DataCenterProps) {
           </div>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">
             {isSupabaseConfigured
-              ? 'Projektoplysningerne er indlæst i appen. Test forbindelsen herunder; databasen skal også have LIFE 2.0-tabellen og RLS-politikkerne installeret.'
-              : 'Supabase-koden er klargjort. Tilføj VITE_SUPABASE_URL og VITE_SUPABASE_ANON_KEY som GitHub Actions secrets for at aktivere forbindelsen.'}
+              ? 'Projektoplysningerne er indlæst, og LIFE 2.0-tabellen samt RLS-politikkerne findes i Supabase. API-testen kontrollerer forbindelsen; login og synkronisering af appens data er endnu ikke aktiveret.'
+              : 'Supabase er klargjort, men projektoplysningerne mangler i den offentliggjorte app. Forbindelsen skal konfigureres i GitHub-buildet.'}
           </p>
           <button type="button" onClick={testSupabase} disabled={!isSupabaseConfigured || checking} className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
             {checking ? 'Tester forbindelse…' : 'Test Supabase-forbindelse'}
@@ -90,7 +90,7 @@ export function DataCenter({ onClose }: DataCenterProps) {
           <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-400" />
           <p>Adgangskoder og private nøgler skal aldrig ligge i webappen eller GitHub. OAuth-tokens og iCloud-adgang skal opbevares krypteret på backend. Første version får kun læseadgang til kalendere.</p>
         </div>
-        <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500"><RefreshCw size={11} /> Synkronisering er endnu ikke aktiv</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500"><RefreshCw size={11} /> Databasesynkronisering er endnu ikke aktiv</p>
       </div>
     </div>
   );
