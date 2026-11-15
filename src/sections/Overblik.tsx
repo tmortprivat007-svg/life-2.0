@@ -9,7 +9,7 @@ import { useLocalStorage, uid, formatDateLong, dayName } from '@/hooks/useLocalS
 import {
   initialTasks, initialEvents, initialWeights, initialWorkouts, sectionColors,
 } from '@/data/demoData';
-import type { Task, SectionId, CalendarEvent } from '@/types';
+import type { Task, SectionId, CalendarEvent, NutritionEntry, Email, Investment, SavingsGoal, Trip, Meeting, WorkTask } from '@/types';
 import type { ReactNode } from 'react';
 
 interface OverblikProps { onNavigate: (section: SectionId) => void; }
@@ -49,6 +49,13 @@ export function Overblik({ onNavigate }: OverblikProps) {
   const [events] = useLocalStorage<CalendarEvent[]>('life2_events', initialEvents);
   const [weights] = useLocalStorage('life2_weights', initialWeights);
   const [workouts] = useLocalStorage('life2_workouts', initialWorkouts);
+  const [nutrition] = useLocalStorage<NutritionEntry[]>('life2_nutrition', []);
+  const [emails] = useLocalStorage<Email[]>('life2_emails', []);
+  const [investments] = useLocalStorage<Investment[]>('life2_investments', []);
+  const [savingsGoals] = useLocalStorage<SavingsGoal[]>('life2_savingsGoals', []);
+  const [trips] = useLocalStorage<Trip[]>('life2_trips', []);
+  const [meetings] = useLocalStorage<Meeting[]>('life2_meetings', []);
+  const [workTasks] = useLocalStorage<WorkTask[]>('life2_workTasks', []);
   const [dailyFocus, setDailyFocus] = useLocalStorage<string>('life2_dailyFocus', '');
   const [newTask, setNewTask] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
@@ -77,6 +84,14 @@ export function Overblik({ onNavigate }: OverblikProps) {
     return diff >= 0 && diff < 7;
   }).length;
   const currentWeight = weights.length ? weights[weights.length - 1].weight : null;
+  const todayCalories = nutrition.filter(n => n.date === todayStr).reduce((sum, n) => sum + n.calories, 0);
+  const unreadEmails = emails.filter(e => !e.read).length;
+  const followUps = emails.filter(e => e.followUp).length;
+  const portfolioValue = investments.reduce((sum, item) => sum + item.value, 0);
+  const savingsValue = savingsGoals.reduce((sum, goal) => sum + goal.current, 0);
+  const nextTrip = trips.filter(trip => (trip.status === 'upcoming' || trip.status === 'planning') && trip.endDate >= todayStr).sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+  const todayMeetings = meetings.filter(m => m.date === todayStr).sort((a, b) => a.time.localeCompare(b.time));
+  const openWorkTasks = workTasks.filter(t => !t.done).length;
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
     d.setDate(now.getDate() - 6 + i);
@@ -182,6 +197,19 @@ export function Overblik({ onNavigate }: OverblikProps) {
       </section>
 
       <section>
+        <SectionHeader title="Dine moduler · status" subtitle="Seneste registreringer på tværs af LIFE 2.0" />
+        <div className="grid grid-cols-2 gap-2.5">
+          <ModuleSnapshot icon={<HeartPulse size={17} />} title="Sundhed" value={todayCalories ? `${todayCalories.toLocaleString('da-DK')} kcal` : currentWeight !== null ? `${currentWeight} kg` : 'Ingen data'} detail={todayCalories ? 'Registreret i dag' : 'Dagens kalorier / vægt'} color="#22c55e" onClick={() => onNavigate('sundhed')} />
+          <ModuleSnapshot icon={<Dumbbell size={17} />} title="Træning" value={`${workoutsLast7Days} pas`} detail="Seneste 7 dage" color="#f97316" onClick={() => onNavigate('traening')} />
+          <ModuleSnapshot icon={<CalendarDays size={17} />} title="Kalender" value={`${todayEvents.length} aftaler`} detail="Planlagt i dag" color="#3b82f6" onClick={() => onNavigate('kalender')} />
+          <ModuleSnapshot icon={<Mail size={17} />} title="Mail" value={`${unreadEmails} ulæste`} detail={`${followUps} til opfølgning`} color="#8b5cf6" onClick={() => onNavigate('mail')} />
+          <ModuleSnapshot icon={<Wallet size={17} />} title="Økonomi" value={portfolioValue ? formatMoney(portfolioValue) : 'Ingen investeringer'} detail={savingsValue ? `${formatMoney(savingsValue)} opsparet` : 'Portefølje og opsparing'} color="#f59e0b" onClick={() => onNavigate('okonomi')} />
+          <ModuleSnapshot icon={<Plane size={17} />} title="Rejser" value={nextTrip ? nextTrip.destination : 'Ingen rejse'} detail={nextTrip ? `Fra ${new Date(nextTrip.startDate + 'T12:00:00').toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}` : 'Dine kommende rejser'} color="#ec4899" onClick={() => onNavigate('rejser')} />
+          <ModuleSnapshot icon={<Briefcase size={17} />} title="Arbejde" value={`${todayMeetings.length} møder i dag`} detail={`${openWorkTasks} åbne arbejdsopgaver`} color="#14b8a6" onClick={() => onNavigate('arbejde')} />
+        </div>
+      </section>
+
+      <section>
         <SectionHeader title="Dine moduler" subtitle="Gå direkte til det, du vil arbejde med" />
         <div className="grid grid-cols-2 gap-2.5">
           {moduleMeta.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => onNavigate(id)} className="glass-card glass-card-hover flex items-center gap-3 p-3 text-left active:scale-[0.98]">
@@ -213,4 +241,22 @@ function EventRow({ event, showDate = false }: { event: CalendarEvent; showDate?
 
 function EmptyLine({ icon, title, detail }: { icon: ReactNode; title: string; detail: string }) {
   return <div className="py-5 text-center"><div className="mb-2 flex justify-center text-slate-600">{icon}</div><p className="text-sm text-slate-300">{title}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>;
+}
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(value);
+}
+
+function ModuleSnapshot({ icon, title, value, detail, color, onClick }: {
+  icon: ReactNode; title: string; value: string; detail: string; color: string; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="glass-card glass-card-hover min-w-0 p-3 text-left active:scale-[0.98]">
+      <div className="mb-2 flex items-center gap-2" style={{ color }}>
+        {icon}<span className="text-xs font-semibold text-slate-300">{title}</span>
+      </div>
+      <p className="truncate text-sm font-bold text-white">{value}</p>
+      <p className="mt-1 truncate text-[10px] text-slate-500">{detail}</p>
+    </button>
+  );
 }
