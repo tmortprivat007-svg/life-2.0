@@ -1,4 +1,6 @@
-import { X, Database, HeartPulse, CalendarDays, Mail, Wallet, Plane, Briefcase, Dumbbell, ShieldCheck, RefreshCw, LockKeyhole } from 'lucide-react';
+import { useState } from 'react';
+import { X, Database, HeartPulse, CalendarDays, Mail, Wallet, Plane, Briefcase, Dumbbell, ShieldCheck, RefreshCw, LockKeyhole, CheckCircle2, AlertCircle } from 'lucide-react';
+import { checkSupabaseConnection, isSupabaseConfigured } from '@/lib/supabase';
 
 interface DataCenterProps {
   onClose: () => void;
@@ -31,7 +33,22 @@ export function DataCenter({ onClose }: DataCenterProps) {
           <button type="button" onClick={onClose} aria-label="Luk datacenter" className="rounded-xl p-2 text-slate-400 hover:bg-white/5"><X size={20} /></button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3">
+        <div className={`mt-4 rounded-2xl border p-3 ${isSupabaseConfigured ? 'border-emerald-400/20 bg-emerald-400/5' : 'border-amber-400/20 bg-amber-400/5'}`}>
+          <div className={`flex items-center gap-2 ${isSupabaseConfigured ? 'text-emerald-300' : 'text-amber-300'}`}>
+            {isSupabaseConfigured ? <CheckCircle2 size={16} /> : <LockKeyhole size={16} />}
+            <span className="text-sm font-semibold">Supabase · {isSupabaseConfigured ? 'Nøgler konfigureret' : 'Afventer projektoplysninger'}</span>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            {isSupabaseConfigured
+              ? 'Projektoplysningerne er indlæst i appen. Test forbindelsen herunder; databasen skal også have LIFE 2.0-tabellen og RLS-politikkerne installeret.'
+              : 'Supabase-koden er klargjort. Tilføj VITE_SUPABASE_URL og VITE_SUPABASE_ANON_KEY som GitHub Actions secrets for at aktivere forbindelsen.'}
+          </p>
+          <button type="button" onClick={testSupabase} disabled={!isSupabaseConfigured || checking} className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
+            {checking ? 'Tester forbindelse…' : 'Test Supabase-forbindelse'}
+          </button>
+          {connectionMessage && <p className="mt-2 flex items-start gap-2 text-xs text-slate-300"><AlertCircle size={14} className="mt-0.5 shrink-0" />{connectionMessage}</p>}
+        </div>
+        <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3">
           <div className="flex items-center gap-2 text-amber-300">
             <LockKeyhole size={16} />
             <span className="text-sm font-semibold">Kalenderintegration klargøres</span>
