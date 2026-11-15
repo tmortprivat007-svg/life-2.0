@@ -22,7 +22,7 @@ function localISO(date: Date): string {
 }
 
 function greeting(hour: number): string {
-  if (hour < 5) return 'God aften';
+  if (hour < 5) return 'God nat';
   if (hour < 10) return 'Godmorgen';
   if (hour < 18) return 'God dag';
   return 'God aften';
@@ -69,6 +69,7 @@ export function Overblik({ onNavigate }: OverblikProps) {
   const pendingTasks = tasks.filter(t => !t.done);
   const doneTasks = tasks.filter(t => t.done);
   const taskProgress = tasks.length ? doneTasks.length / tasks.length * 100 : 0;
+  const hasTasks = tasks.length > 0;
   const workoutsLast7Days = workouts.filter(w => {
     const d = new Date(`${w.date}T12:00:00`);
     const start = new Date(todayStr + 'T00:00:00');
@@ -118,10 +119,10 @@ export function Overblik({ onNavigate }: OverblikProps) {
 
       <Card>
         <div className="flex items-center gap-4">
-          <ProgressRing progress={taskProgress} size={76} color="#06b6d4" label={`${Math.round(taskProgress)}%`} sublabel="klaret" />
+          <ProgressRing progress={taskProgress} size={76} color="#06b6d4" label={hasTasks ? `${Math.round(taskProgress)}%` : "—"} sublabel={hasTasks ? "klaret" : "ingen opgaver"} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white">Dagens fremdrift</p>
-            <p className="mt-1 text-xs text-slate-400">{pendingTasks.length} åbne · {doneTasks.length} afsluttet</p>
+            <p className="mt-1 text-xs text-slate-400">{hasTasks ? `${pendingTasks.length} åbne · ${doneTasks.length} afsluttet` : "Tilføj dagens første opgave for at følge fremgangen."}</p>
             <div className="mt-3"><ProgressBar progress={taskProgress} color="#06b6d4" /></div>
           </div>
         </div>
@@ -148,7 +149,7 @@ export function Overblik({ onNavigate }: OverblikProps) {
                 <button type="button" onClick={() => deleteTask(task.id)} aria-label="Slet opgave" className="p-1.5 text-slate-600 hover:text-rose-400"><Trash2 size={15} /></button>
               </div>
             ))}
-            {tasks.length === 0 && <div className="py-5 text-center"><Target size={22} className="mx-auto mb-2 text-slate-600" /><p className="text-sm text-slate-400">Ingen opgaver endnu</p><p className="mt-1 text-xs text-slate-500">Tilføj den første opgave ovenfor.</p></div>}
+            {tasks.length === 0 && <div className="py-5 text-center"><Target size={22} className="mx-auto mb-2 text-slate-600" /><p className="text-sm text-slate-400">Ingen opgaver endnu</p><p className="mt-1 text-xs text-slate-500">Tilføj den første opgave ovenfor – så følger LIFE din fremgang.</p></div>}
           </div>
         </Card>
       </section>
