@@ -18,6 +18,17 @@ const sources = [
 ];
 
 export function DataCenter({ onClose }: DataCenterProps) {
+  const [connectionMessage, setConnectionMessage] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const testSupabase = async () => {
+    setChecking(true);
+    setConnectionMessage(null);
+    const result = await checkSupabaseConnection();
+    setConnectionMessage(result.message);
+    setChecking(false);
+  };
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="data-center-title">
       <div className="w-full max-w-md max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-white/10 bg-navy-900 p-5 shadow-2xl">
