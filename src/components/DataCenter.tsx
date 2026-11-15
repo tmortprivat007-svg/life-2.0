@@ -5,13 +5,14 @@ interface DataCenterProps {
 }
 
 const sources = [
+  { name: 'Google Kalender', area: 'Google-aftaler', detail: 'Kræver Google OAuth Client ID, Calendar API og sikker tokenhåndtering på backend. Kun læseadgang i første version.', icon: CalendarDays, status: 'Afventer OAuth-opsætning' },
+  { name: 'iCloud Kalender', area: 'Apple-aftaler', detail: 'Kræver en sikker serverforbindelse til iCloud CalDAV. ChatGPTs eksisterende iCloud-forbindelse kan ikke genbruges direkte af LIFE 2.0.', icon: CalendarDays, status: 'Afventer backend-opsætning' },
+  { name: 'Gmail', area: 'Mail og rejsebekræftelser', detail: 'Kræver separat Google OAuth-godkendelse og Gmail API-adgang. Kalenderadgang giver ikke automatisk adgang til mail.', icon: Mail, status: 'Afventer OAuth-opsætning' },
   { name: 'Apple Health', area: 'Sundhed og aktivitet', detail: 'Kræver en iPhone-app med HealthKit-adgang. En webside kan ikke selv læse Apple Health-data.', icon: HeartPulse, status: 'Kræver iOS-integration' },
-  { name: 'iCloud Kalender', area: 'Aftaler og kalender', detail: 'Kræver sikker kontoforbindelse eller en godkendt kalenderintegration.', icon: CalendarDays, status: 'Kræver opsætning' },
-  { name: 'Gmail', area: 'Mail og rejsebekræftelser', detail: 'Kræver Google OAuth-godkendelse og en sikker backend til tokens.', icon: Mail, status: 'Kræver opsætning' },
   { name: 'Danske Bank', area: 'Konti og betalinger', detail: 'Kræver en PSD2/Open Banking-udbyder og din udtrykkelige bankgodkendelse.', icon: Wallet, status: 'Kræver bankintegration' },
   { name: 'MyFitnessPal', area: 'Kost og ernæring', detail: 'Afhænger af tilgængelig API-adgang og godkendelse fra tjenesten.', icon: Dumbbell, status: 'Kræver API-adgang' },
-  { name: 'Rejser', area: 'Bookinger og billetter', detail: 'Kan samles fra godkendte mail- og kalenderkilder, når de er forbundet.', icon: Plane, status: 'Afventer mail og kalender' },
-  { name: 'Arbejde', area: 'Møder og opgaver', detail: 'Kan samles fra kalender og mail med særskilt adgang og tydelige tilladelser.', icon: Briefcase, status: 'Afventer mail og kalender' },
+  { name: 'Rejser', area: 'Bookinger og billetter', detail: 'Kan samles fra godkendte mail- og kalenderkilder, når de er forbundet.', icon: Plane, status: 'Afventer kalender og mail' },
+  { name: 'Arbejde', area: 'Møder og opgaver', detail: 'Kan samles fra godkendte kalender- og mailkilder med særskilte tilladelser.', icon: Briefcase, status: 'Afventer kalender og mail' },
 ];
 
 export function DataCenter({ onClose }: DataCenterProps) {
@@ -25,7 +26,7 @@ export function DataCenter({ onClose }: DataCenterProps) {
               <span className="text-xs font-semibold uppercase tracking-wider">LIFE 2.0 · Datacenter</span>
             </div>
             <h2 id="data-center-title" className="mt-2 text-xl font-bold text-white">Dine datakilder</h2>
-            <p className="mt-1 text-sm text-slate-400">Automatisk synkronisering bliver aktiveret kilde for kilde – først efter sikker godkendelse.</p>
+            <p className="mt-1 text-sm text-slate-400">Målet er ét samlet overblik med automatisk synkronisering fra godkendte kilder.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Luk datacenter" className="rounded-xl p-2 text-slate-400 hover:bg-white/5"><X size={20} /></button>
         </div>
@@ -33,9 +34,9 @@ export function DataCenter({ onClose }: DataCenterProps) {
         <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3">
           <div className="flex items-center gap-2 text-amber-300">
             <LockKeyhole size={16} />
-            <span className="text-sm font-semibold">Ingen kilder er forbundet endnu</span>
+            <span className="text-sm font-semibold">Kalenderintegration klargøres</span>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">Appen bruger i øjeblikket lokal lagring. Den viser ikke eksterne data som synkroniserede, før en rigtig forbindelse er etableret og testet.</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">iCloud og Google skal forbindes direkte til LIFE 2.0 via en sikker backend. Ingen kalenderdata vises som synkroniserede, før forbindelsen er godkendt og testet.</p>
         </div>
 
         <div className="mt-4 space-y-2">
@@ -49,7 +50,7 @@ export function DataCenter({ onClose }: DataCenterProps) {
                     <p className="text-sm font-semibold text-white">{source.name}</p>
                     <p className="text-[11px] text-slate-500">{source.area}</p>
                   </div>
-                  <span className="max-w-[118px] rounded-lg bg-white/5 px-2 py-1 text-right text-[10px] leading-tight text-slate-400">{source.status}</span>
+                  <span className="max-w-[130px] rounded-lg bg-white/5 px-2 py-1 text-right text-[10px] leading-tight text-slate-400">{source.status}</span>
                 </div>
                 <p className="mt-2 pl-12 text-xs leading-relaxed text-slate-400">{source.detail}</p>
               </div>
@@ -59,7 +60,7 @@ export function DataCenter({ onClose }: DataCenterProps) {
 
         <div className="mt-4 flex items-start gap-2 rounded-xl bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-400">
           <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-400" />
-          <p>Adgangskoder skal aldrig gemmes i appen. Forbindelser skal bruge officielle godkendelsesflows, krypteret tokenlagring og mulighed for at afbryde adgangen.</p>
+          <p>Adgangskoder og private nøgler skal aldrig ligge i webappen eller GitHub. OAuth-tokens og iCloud-adgang skal opbevares krypteret på backend. Første version får kun læseadgang til kalendere.</p>
         </div>
         <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-500"><RefreshCw size={11} /> Synkronisering er endnu ikke aktiv</p>
       </div>
