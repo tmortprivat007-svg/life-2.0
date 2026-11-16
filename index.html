@@ -14,7 +14,19 @@
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
   </head>
   <body>
+    <div id="boot-status" style="min-height:100vh;background:#070a14;color:#e2e8f0;display:grid;place-items:center;padding:24px;font-family:system-ui,sans-serif;text-align:center"><div><h1 style="font-size:28px;margin:0 0 12px">LIFE 2.0</h1><p id="boot-message">Starter appen…</p></div></div>
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function (event) {
+        var message = event.message || (event.target && event.target.src) || 'Ukendt indlæsningsfejl';
+        var box = document.getElementById('boot-status'), label = document.getElementById('boot-message');
+        if (box && label) { label.textContent = 'Appen kunne ikke indlæses: ' + message; box.style.display = 'grid'; }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        var box = document.getElementById('boot-status'), label = document.getElementById('boot-message');
+        if (box && label) { label.textContent = 'Opstartsfejl: ' + String(event.reason); box.style.display = 'grid'; }
+      });
+    </script>
     <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>
