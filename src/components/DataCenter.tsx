@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAppData } from '@/store/AppData';
 import { X, Database, HeartPulse, CalendarDays, Mail, Wallet, Plane, Briefcase, Dumbbell, ShieldCheck, RefreshCw, LockKeyhole, CheckCircle2, AlertCircle } from 'lucide-react';
 import { checkSupabaseConnection, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -20,6 +21,21 @@ const sources = [
 export function DataCenter({ onClose }: DataCenterProps) {
   const [connectionMessage, setConnectionMessage] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const { userEmail, authLoading, syncStatus, syncError, signInWithEmail, signOut, syncNow } = useAppData();
+  const [email, setEmail] = useState('');
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+
+  const requestSignIn = async () => {
+    if (!email.trim()) return;
+    setAuthBusy(true);
+    setAuthMessage(null);
+    const error = await signInWithEmail(email.trim());
+    setAuthMessage(error ?? 'Vi har sendt et loginlink til din e-mail. Åbn linket på denne enhed for at forbinde LIFE 2.0.');
+    setAuthBusy(false);
+  };
+
+  const syncLabel = syncStatus === 'synced' ? 'Synkroniseret' : syncStatus === 'syncing' ? 'Synkroniserer…' : syncStatus === 'error' ? 'Synkroniseringsfejl' : syncStatus === 'offline' ? 'Ikke konfigureret' : 'Ikke logget ind';
 
   const testSupabase = async () => {
     setChecking(true);
@@ -59,6 +75,36 @@ export function DataCenter({ onClose }: DataCenterProps) {
           </button>
           {connectionMessage && <p className="mt-2 flex items-start gap-2 text-xs text-slate-300"><AlertCircle size={14} className="mt-0.5 shrink-0" />{connectionMessage}</p>}
         </div>
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-white">Personlig datasynkronisering</p>
+              <p className="mt-1 text-xs text-slate-400">Dine LIFE-data gemmes sikkert i din egen Supabase-brugerprofil.</p>
+            </div>
+            <span className={`rounded-lg px-2 py-1 text-[10px] ${syncStatus === 'synced' ? 'bg-emerald-400/10 text-emerald-300' : syncStatus === 'error' ? 'bg-red-400/10 text-red-300' : 'bg-white/5 text-slate-400'}`}>{syncLabel}</span>
+          </div>
+          {authLoading ? (
+            <p className="mt-3 text-xs text-slate-400">Kontrollerer login…</p>
+          ) : userEmail ? (
+            <div className="mt-3">
+              <p className="text-xs text-slate-300">Forbundet som <strong className="text-white">{userEmail}</strong></p>
+              {syncError && <p className="mt-2 text-xs text-red-300">{syncError}</p>}
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => void syncNow()} disabled={syncStatus === 'syncing'} className="rounded-xl bg-accent-cyan/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">Synkronisér nu</button>
+                <button type="button" onClick={() => void signOut()} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200">Log ud</button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <label htmlFor="life2-login-email" className="mb-1 block text-xs text-slate-300">Din e-mailadresse</label>
+              <input id="life2-login-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="navn@eksempel.dk" className="w-full rounded-xl border border-white/10 bg-navy-950 px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400" />
+              <button type="button" onClick={() => void requestSignIn()} disabled={!isSupabaseConfigured || authBusy || !email.trim()} className="mt-2 w-full rounded-xl bg-accent-cyan px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40">{authBusy ? 'Sender loginlink…' : 'Send sikkert loginlink'}</button>
+              {authMessage && <p className="mt-2 text-xs leading-relaxed text-slate-300">{authMessage}</p>}
+              {syncError && <p className="mt-2 text-xs text-red-300">{syncError}</p>}
+            </div>
+          )}
+        </div>
+
         <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-3">
           <div className="flex items-center gap-2 text-amber-300">
             <LockKeyhole size={16} />
