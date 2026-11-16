@@ -32,7 +32,7 @@ export async function checkSupabaseConnection(): Promise<{ ok: boolean; message:
     if (!response.ok) {
       return { ok: false, message: `Supabase svarede med HTTP ${response.status}.` };
     }
-    return { ok: true, message: 'Supabase API svarer. Databasens tabel og login skal stadig opsættes.' };
+    return { ok: true, message: 'Supabase API svarer. Brug login nedenfor for at aktivere personlig datasynkronisering.' };
   } catch {
     return { ok: false, message: 'Kunne ikke oprette forbindelse til Supabase. Kontrollér URL og netværk.' };
   }
