@@ -203,7 +203,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !userId) {
+    const client = supabase;
+    if (!client || !userId) {
       setSyncReady(false);
       return;
     }
@@ -213,7 +214,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setSyncReady(false);
       setSyncStatus('syncing');
       setSyncError(null);
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('life_records')
         .select('data_key, payload')
         .eq('user_id', userId);
@@ -235,7 +236,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         if (remote.has(key)) {
           applyCloudValue(key, remote.get(key));
         } else {
-          const { error: saveError } = await supabase
+          const { error: saveError } = await client
             .from('life_records')
             .upsert(
               { user_id: userId, data_key: key, payload: localValue },
@@ -262,7 +263,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, [userId, applyCloudValue]);
 
   useEffect(() => {
-    if (!supabase || !userId || !syncReady) return;
+    const client = supabase;
+    if (!client || !userId || !syncReady) return;
     let active = true;
     const timer = window.setTimeout(async () => {
       setSyncStatus('syncing');
@@ -312,7 +314,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const syncNow = useCallback(async () => {
-    if (!supabase || !userId) return;
+    const client = supabase;
+    if (!client || !userId) return;
     setSyncStatus('syncing');
     const records = Object.entries(localCollections).map(([data_key, payload]) => ({
       user_id: userId,
