@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
@@ -145,8 +145,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     tasks, events, weights, nutrition, workouts, runs, emails, transactions,
     investments, goals, trips, meetings, workTasks, workNotes, plans, trainingHistory,
   };
+  const localCollectionsRef = useRef(localCollections);
+  localCollectionsRef.current = localCollections;
 
-  const applyCloudValue = (key: string, payload: unknown) => {
+  const applyCloudValue = useCallback((key: string, payload: unknown) => {
     switch (key) {
       case 'tasks': setTasks(payload as Task[]); break;
       case 'events': setEvents(payload as CalendarEvent[]); break;
@@ -165,7 +167,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       case 'plans': setPlans(payload as TrainingPlan[]); break;
       case 'trainingHistory': setTrainingHistory(payload as TrainingHistory[]); break;
     }
-  };
+  }, [setTasks, setEvents, setWeights, setNutrition, setWorkouts, setRuns, setEmails, setTransactions, setInvestments, setGoals, setTrips, setMeetings, setWorkTasks, setWorkNotes, setPlans, setTrainingHistory]);
 
   useEffect(() => {
     if (!supabase) {
@@ -228,7 +230,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         (data ?? []).map((row: { data_key: string; payload: unknown }) => [row.data_key, row.payload])
       );
 
-      for (const [key, localValue] of Object.entries(localCollections)) {
+      for (const [key, localValue] of Object.entries(localCollectionsRef.current)) {
         if (!active) return;
         if (remote.has(key)) {
           applyCloudValue(key, remote.get(key));
@@ -257,14 +259,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
     void hydrate();
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, applyCloudValue]);
 
   useEffect(() => {
     if (!supabase || !userId || !syncReady) return;
     let active = true;
     const timer = window.setTimeout(async () => {
       setSyncStatus('syncing');
-      const records = Object.entries(localCollections).map(([data_key, payload]) => ({
+      const records = Object.entries(localCollectionsRef.current).map(([data_key, payload]) => ({
         user_id: userId,
         data_key,
         payload,
