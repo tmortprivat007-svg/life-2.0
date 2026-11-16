@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+// The publishable key is designed for browser use. Environment variables may override these
+// project defaults when a separate deployment environment is configured.
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || 'https://pzqakbhbvvyiwmcxmjyj.supabase.co').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_qiECEFGoaxv605NcEdf75w_2M-noG-D').trim();
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
