@@ -322,7 +322,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       data_key,
       payload,
     }));
-    const { error } = await supabase
+    const { error } = await client
       .from('life_records')
       .upsert(records, { onConflict: 'user_id,data_key' });
     if (error) {
