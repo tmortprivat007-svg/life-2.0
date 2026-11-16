@@ -33,6 +33,8 @@ class AppErrorBoundary extends Component<
   }
 }
 
+document.getElementById('boot-status')?.remove();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
