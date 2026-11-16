@@ -1,4 +1,5 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   initialTasks,
@@ -102,6 +103,13 @@ interface AppDataContextType {
   setTrainingHistory: (value: TrainingHistory[] | ((prev: TrainingHistory[]) => TrainingHistory[])) => void;
   integrations: IntegrationStatus[];
   setIntegrations: (value: IntegrationStatus[] | ((prev: IntegrationStatus[]) => IntegrationStatus[])) => void;
+  userEmail: string | null;
+  authLoading: boolean;
+  syncStatus: 'offline' | 'signed_out' | 'syncing' | 'synced' | 'error';
+  syncError: string | null;
+  signInWithEmail: (email: string) => Promise<string | null>;
+  signOut: () => Promise<void>;
+  syncNow: () => Promise<void>;
   getDataSource: (integrationId: IntegrationId) => DataSource;
 }
 
@@ -125,6 +133,204 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [plans, setPlans] = useLocalStorage<TrainingPlan[]>('life2_plans', initialTrainingPlans);
   const [trainingHistory, setTrainingHistory] = useLocalStorage<TrainingHistory[]>('life2_trainingHistory', initialTrainingHistory);
   const [integrations, setIntegrations] = useLocalStorage<IntegrationStatus[]>('life2_integrations', defaultIntegrations);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'offline' | 'signed_out' | 'syncing' | 'synced' | 'error'>(supabase ? 'signed_out' : 'offline');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncReady, setSyncReady] = useState(false);
+
+  const localCollections = {
+    tasks, events, weights, nutrition, workouts, runs, emails, transactions,
+    investments, goals, trips, meetings, workTasks, workNotes, plans, trainingHistory,
+  };
+
+  const applyCloudValue = (key: string, payload: unknown) => {
+    switch (key) {
+      case 'tasks': setTasks(payload as Task[]); break;
+      case 'events': setEvents(payload as CalendarEvent[]); break;
+      case 'weights': setWeights(payload as WeightEntry[]); break;
+      case 'nutrition': setNutrition(payload as NutritionEntry[]); break;
+      case 'workouts': setWorkouts(payload as WorkoutEntry[]); break;
+      case 'runs': setRuns(payload as RunEntry[]); break;
+      case 'emails': setEmails(payload as Email[]); break;
+      case 'transactions': setTransactions(payload as Transaction[]); break;
+      case 'investments': setInvestments(payload as Investment[]); break;
+      case 'goals': setGoals(payload as SavingsGoal[]); break;
+      case 'trips': setTrips(payload as Trip[]); break;
+      case 'meetings': setMeetings(payload as Meeting[]); break;
+      case 'workTasks': setWorkTasks(payload as WorkTask[]); break;
+      case 'workNotes': setWorkNotes(payload as WorkNote[]); break;
+      case 'plans': setPlans(payload as TrainingPlan[]); break;
+      case 'trainingHistory': setTrainingHistory(payload as TrainingHistory[]); break;
+    }
+  };
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthLoading(false);
+      setSyncStatus('offline');
+      return;
+    }
+
+    let active = true;
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setUserId(session?.user.id ?? null);
+      setUserEmail(session?.user.email ?? null);
+      if (!session) {
+        setSyncReady(false);
+        setSyncStatus('signed_out');
+      }
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setSyncError(error.message);
+      setUserId(data.session?.user.id ?? null);
+      setUserEmail(data.session?.user.email ?? null);
+      setAuthLoading(false);
+      if (!data.session) setSyncStatus('signed_out');
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !userId) {
+      setSyncReady(false);
+      return;
+    }
+
+    let active = true;
+    const hydrate = async () => {
+      setSyncReady(false);
+      setSyncStatus('syncing');
+      setSyncError(null);
+      const { data, error } = await supabase
+        .from('life_records')
+        .select('data_key, payload')
+        .eq('user_id', userId);
+
+      if (error) {
+        if (active) {
+          setSyncError(error.message);
+          setSyncStatus('error');
+        }
+        return;
+      }
+
+      const remote = new Map<string, unknown>(
+        (data ?? []).map((row: { data_key: string; payload: unknown }) => [row.data_key, row.payload])
+      );
+
+      for (const [key, localValue] of Object.entries(localCollections)) {
+        if (!active) return;
+        if (remote.has(key)) {
+          applyCloudValue(key, remote.get(key));
+        } else {
+          const { error: saveError } = await supabase
+            .from('life_records')
+            .upsert(
+              { user_id: userId, data_key: key, payload: localValue },
+              { onConflict: 'user_id,data_key' }
+            );
+          if (saveError) {
+            if (active) {
+              setSyncError(saveError.message);
+              setSyncStatus('error');
+            }
+            return;
+          }
+        }
+      }
+
+      if (active) {
+        setSyncReady(true);
+        setSyncStatus('synced');
+      }
+    };
+
+    void hydrate();
+    return () => { active = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!supabase || !userId || !syncReady) return;
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      setSyncStatus('syncing');
+      const records = Object.entries(localCollections).map(([data_key, payload]) => ({
+        user_id: userId,
+        data_key,
+        payload,
+      }));
+      const { error } = await supabase
+        .from('life_records')
+        .upsert(records, { onConflict: 'user_id,data_key' });
+      if (!active) return;
+      if (error) {
+        setSyncError(error.message);
+        setSyncStatus('error');
+      } else {
+        setSyncError(null);
+        setSyncStatus('synced');
+      }
+    }, 700);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [
+    userId, syncReady, tasks, events, weights, nutrition, workouts, runs, emails,
+    transactions, investments, goals, trips, meetings, workTasks, workNotes, plans, trainingHistory,
+  ]);
+
+  const signInWithEmail = useCallback(async (email: string): Promise<string | null> => {
+    if (!supabase) return 'Supabase er ikke konfigureret i appen.';
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+    });
+    return error?.message ?? null;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setSyncError(error.message);
+      setSyncStatus('error');
+    }
+  }, []);
+
+  const syncNow = useCallback(async () => {
+    if (!supabase || !userId) return;
+    setSyncStatus('syncing');
+    const records = Object.entries(localCollections).map(([data_key, payload]) => ({
+      user_id: userId,
+      data_key,
+      payload,
+    }));
+    const { error } = await supabase
+      .from('life_records')
+      .upsert(records, { onConflict: 'user_id,data_key' });
+    if (error) {
+      setSyncError(error.message);
+      setSyncStatus('error');
+    } else {
+      setSyncError(null);
+      setSyncStatus('synced');
+    }
+  }, [
+    userId, tasks, events, weights, nutrition, workouts, runs, emails, transactions,
+    investments, goals, trips, meetings, workTasks, workNotes, plans, trainingHistory,
+  ]);
 
   const getDataSource = (integrationId: IntegrationId): DataSource => {
     const integration = integrations.find(i => i.id === integrationId);
@@ -156,6 +362,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       plans, setPlans,
       trainingHistory, setTrainingHistory,
       integrations, setIntegrations,
+      userEmail, authLoading, syncStatus, syncError, signInWithEmail, signOut, syncNow,
       getDataSource,
     }}>
       {children}
