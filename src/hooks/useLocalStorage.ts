@@ -19,9 +19,22 @@ export function useLocalStorage<T>(key: string, initial: T): [T, (value: T | ((p
     }
   }, [key, state]);
 
+  useEffect(() => {
+    const receiveUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ key: string; value: T }>).detail;
+      if (detail?.key === key) setState(detail.value);
+    };
+    window.addEventListener('life2-local-storage', receiveUpdate);
+    return () => window.removeEventListener('life2-local-storage', receiveUpdate);
+  }, [key]);
+
   const update = useCallback((value: T | ((prev: T) => T)) => {
-    setState(prev => (typeof value === 'function' ? (value as (prev: T) => T)(prev) : value));
-  }, []);
+    setState(prev => {
+      const next = typeof value === 'function' ? (value as (prev: T) => T)(prev) : value;
+      window.dispatchEvent(new CustomEvent('life2-local-storage', { detail: { key, value: next } }));
+      return next;
+    });
+  }, [key]);
 
   return [state, update];
 }
