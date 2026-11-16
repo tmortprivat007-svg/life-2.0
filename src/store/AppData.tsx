@@ -273,7 +273,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         data_key,
         payload,
       }));
-      const { error } = await supabase
+      const { error } = await client
         .from('life_records')
         .upsert(records, { onConflict: 'user_id,data_key' });
       if (!active) return;
@@ -317,7 +317,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     const client = supabase;
     if (!client || !userId) return;
     setSyncStatus('syncing');
-    const records = Object.entries(localCollections).map(([data_key, payload]) => ({
+    const records = Object.entries(localCollectionsRef.current).map(([data_key, payload]) => ({
       user_id: userId,
       data_key,
       payload,
